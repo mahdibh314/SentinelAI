@@ -248,6 +248,7 @@ function do_deploy() {
     if [ -f "ros2_ws/install/setup.bash" ]; then
         source ros2_ws/install/setup.bash
     fi
+    export PYTHONPATH="$SCRIPT_DIR/.venv/lib/python3.12/site-packages${PYTHONPATH:+:$PYTHONPATH}"
     set -u
 
     # Lancement de l'agent micro-ROS
