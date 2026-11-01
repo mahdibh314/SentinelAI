@@ -38,3 +38,4 @@ ros2_ws/log/
 esp32_fw/.pio/
 esp32_fw/lib/micro_ros_platformio/
 esp32_fw/include/secrets.h
+data/snapshots/
