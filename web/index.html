@@ -1,0 +1,342 @@
+<!DOCTYPE html>
+<html lang="fr" data-theme="dark">
+<head>
+  <meta charset="UTF-8">
+  <meta name="viewport" content="width=device-width, initial-scale=1.0, maximum-scale=1.0, user-scalable=no">
+  <title>SentinelAI — Contrôle d'Accès & Vision</title>
+  <link rel="stylesheet" href="css/style.css">
+  <link rel="manifest" href="manifest.json">
+</head>
+<body>
+  <div class="app-container">
+    <!-- En-tête -->
+    <header class="app-header">
+      <div class="brand">
+        <div class="brand-logo">🛡️</div>
+        <div>
+          <h1>SentinelAI</h1>
+          <div class="sub-header">
+            <span id="ros-indicator" class="status-dot dot-offline"></span>
+            <span id="ros-status-text">Connexion...</span>
+            <span class="divider">|</span>
+            <span id="esp32-status-text">ESP32 : en attente</span>
+          </div>
+        </div>
+      </div>
+      <div class="header-actions">
+        <button id="theme-btn" class="btn btn-icon" title="Changer le thème">🌓</button>
+        <button id="alarm-ack-btn" class="btn btn-alarm hidden">🔕 Acquitter l'alarme</button>
+      </div>
+    </header>
+
+    <!-- Navigation par Onglets (Adaptée PC et Mobile) -->
+    <nav class="nav-bar">
+      <button class="nav-item active" data-tab="tab-access">
+        <span class="nav-icon">🔑</span>
+        <span class="nav-label">Accès</span>
+      </button>
+      <button class="nav-item" data-tab="tab-live">
+        <span class="nav-icon">📹</span>
+        <span class="nav-label">Caméra</span>
+      </button>
+      <button class="nav-item" data-tab="tab-intrusions">
+        <span class="nav-icon">🚨</span>
+        <span class="nav-label">Intrusions</span>
+        <span id="intrusions-count" class="badge-pill">0</span>
+      </button>
+      <button class="nav-item" data-tab="tab-events">
+        <span class="nav-icon">📋</span>
+        <span class="nav-label">Journal</span>
+      </button>
+      <button class="nav-item" data-tab="tab-users">
+        <span class="nav-icon">👥</span>
+        <span class="nav-label">Utilisateurs</span>
+      </button>
+      <button class="nav-item" data-tab="tab-settings">
+        <span class="nav-icon">⚙️</span>
+        <span class="nav-label">Réglages</span>
+      </button>
+    </nav>
+
+    <!-- Contenu des Onglets -->
+    <main class="main-content">
+
+      <!-- Onglet 1 : ACCÈS EN DIRECT -->
+      <section id="tab-access" class="tab-panel active">
+        <div class="grid-layout">
+          <!-- Carte Statut Principal -->
+          <div class="card status-display-card" id="status-card">
+            <div class="card-header">
+              <h2>Dernier Événement d'Accès</h2>
+              <span id="status-badge" class="badge badge-idle">EN ATTENTE</span>
+            </div>
+            <div class="status-body">
+              <div id="status-icon" class="large-icon">🔒</div>
+              <div class="status-details">
+                <h3 id="user-display-name">Scannez un badge</h3>
+                <p id="user-display-grp" class="text-muted">Aucun scan récent</p>
+                <div class="meta-row">
+                  <span id="user-display-zone" class="tag">Zone : -</span>
+                  <span id="user-display-level" class="tag">Niveau : -</span>
+                  <span id="user-display-time" class="tag">Heure : -</span>
+                </div>
+                <div id="access-reason" class="reason-banner">Prêt pour la détection</div>
+              </div>
+            </div>
+          </div>
+
+          <!-- Carte Simulation / Choix Rapide (Laptop ou Mobile) -->
+          <div class="card">
+            <div class="card-header">
+              <h3>Tester un code / Badge</h3>
+            </div>
+            <div class="card-body">
+              <p class="text-sm">Sélectionnez un badge de test ou saisissez un code :</p>
+              <div class="quick-badges">
+                <button class="btn btn-outline" onclick="scanTestCode('user_demo')">👤 Alice (Démo - Zone libre)</button>
+                <button class="btn btn-outline" onclick="scanTestCode('user_admin')">⭐ Bob (Admin - Toutes zones)</button>
+                <button class="btn btn-outline btn-outline-danger" onclick="scanTestCode('badge_inconnu')">⛔ Inconnu (Refus)</button>
+              </div>
+              <form id="manual-scan-form" class="scan-form">
+                <input type="text" id="manual-code-input" class="form-input" placeholder="Ex: user_demo ou code barre..." required>
+                <button type="submit" class="btn btn-primary">Valider</button>
+              </form>
+            </div>
+          </div>
+
+          <!-- Statistiques Rapides -->
+          <div class="card stats-grid">
+            <div class="stat-box stat-success">
+              <span class="stat-num" id="stat-ok">0</span>
+              <span class="stat-title">Accès Autorisés</span>
+            </div>
+            <div class="stat-box stat-danger">
+              <span class="stat-num" id="stat-denied">0</span>
+              <span class="stat-title">Refus & Intrusions</span>
+            </div>
+            <div class="stat-box stat-info">
+              <span class="stat-num" id="stat-users">0</span>
+              <span class="stat-title">Utilisateurs Enregistrés</span>
+            </div>
+          </div>
+        </div>
+      </section>
+
+      <!-- Onglet 2 : CAMÉRA EN DIRECT -->
+      <section id="tab-live" class="tab-panel">
+        <div class="card video-card">
+          <div class="card-header">
+            <h2>Flux Vidéo en Direct</h2>
+            <span class="badge badge-success">YOLO11n Actif</span>
+          </div>
+          <div class="video-container">
+            <img id="mjpeg-stream" src="/api/camera/stream" alt="Flux caméra en direct" onerror="this.src=''; this.alt='Caméra en attente...';">
+          </div>
+          <div class="video-footer">
+            <span class="text-sm">Traitement 100% local (HP OMEN RTX 3060). Aucune vidéo enregistrée sur disque.</span>
+          </div>
+        </div>
+      </section>
+
+      <!-- Onglet 3 : INTRUSIONS -->
+      <section id="tab-intrusions" class="tab-panel">
+        <div class="card">
+          <div class="card-header">
+            <h2>Galerie des Intrusions & Refus d'accès</h2>
+            <button class="btn btn-sm btn-secondary" onclick="loadEvents()">Actualiser</button>
+          </div>
+          <div id="intrusions-gallery" class="gallery-grid">
+            <p class="text-muted">Aucune alerte d'intrusion enregistrée.</p>
+          </div>
+        </div>
+      </section>
+
+      <!-- Onglet 4 : JOURNAL DES ÉVÉNEMENTS -->
+      <section id="tab-events" class="tab-panel">
+        <div class="card">
+          <div class="card-header filter-header">
+            <h2>Journal des Événements (30 jours)</h2>
+            <div class="filters">
+              <select id="filter-group" class="form-select" onchange="applyFilters()">
+                <option value="all">Tous les groupes</option>
+                <option value="Direction">Direction</option>
+                <option value="Technique">Technique</option>
+                <option value="Visiteur">Visiteur</option>
+              </select>
+              <select id="filter-status" class="form-select" onchange="applyFilters()">
+                <option value="all">Tous les statuts</option>
+                <option value="ok">Autorisés</option>
+                <option value="denied">Refusés</option>
+              </select>
+            </div>
+          </div>
+          <div class="table-responsive">
+            <table class="table" id="events-table">
+              <thead>
+                <tr>
+                  <th>Date & Heure</th>
+                  <th>Type</th>
+                  <th>Identifiant</th>
+                  <th>Statut</th>
+                  <th>Intrus</th>
+                  <th>Photo</th>
+                </tr>
+              </thead>
+              <tbody id="events-tbody">
+                <tr><td colspan="6" class="text-center">Chargement...</td></tr>
+              </tbody>
+            </table>
+          </div>
+        </div>
+      </section>
+
+      <!-- Onglet 5 : UTILISATEURS -->
+      <section id="tab-users" class="tab-panel">
+        <div class="card">
+          <div class="card-header">
+            <h2>Gestion des Utilisateurs & Badges</h2>
+            <button class="btn btn-primary btn-sm" onclick="toggleUserForm()">+ Nouvel Utilisateur</button>
+          </div>
+
+          <!-- Formulaire Ajout / Édition -->
+          <div id="user-form-card" class="form-drawer hidden">
+            <form id="user-form" onsubmit="saveUser(event)">
+              <div class="form-row">
+                <div class="form-group">
+                  <label>Code Badge (identifiant opaque)</label>
+                  <input type="text" id="form-code" class="form-input" placeholder="Ex: user_test" required>
+                </div>
+                <div class="form-group">
+                  <label>Nom complet</label>
+                  <input type="text" id="form-name" class="form-input" placeholder="Ex: Jean Dupont" required>
+                </div>
+                <div class="form-group">
+                  <label>Groupe</label>
+                  <select id="form-grp" class="form-select">
+                    <option value="Technique">Technique</option>
+                    <option value="Direction">Direction</option>
+                    <option value="Visiteur">Visiteur</option>
+                  </select>
+                </div>
+                <div class="form-group">
+                  <label>Niveau (1 à 3)</label>
+                  <select id="form-level" class="form-select">
+                    <option value="1">1 (Standard)</option>
+                    <option value="2">2 (Avancé)</option>
+                    <option value="3">3 (Admin)</option>
+                  </select>
+                </div>
+                <div class="form-group">
+                  <label>Zone autorisée</label>
+                  <select id="form-zone" class="form-select">
+                    <option value="zone_libre">zone_libre</option>
+                    <option value="zone_interdite">zone_interdite</option>
+                  </select>
+                </div>
+              </div>
+              <div class="form-actions">
+                <button type="submit" class="btn btn-success">Enregistrer</button>
+                <button type="button" class="btn btn-secondary" onclick="toggleUserForm()">Annuler</button>
+              </div>
+            </form>
+          </div>
+
+          <div class="table-responsive">
+            <table class="table">
+              <thead>
+                <tr>
+                  <th>Code ID</th>
+                  <th>Nom</th>
+                  <th>Groupe</th>
+                  <th>Niveau</th>
+                  <th>Zone</th>
+                  <th>Statut</th>
+                </tr>
+              </thead>
+              <tbody id="users-tbody"></tbody>
+            </table>
+          </div>
+        </div>
+      </section>
+
+      <!-- Onglet 6 : RÉGLAGES (Choix Matériel Laptop vs Extension) -->
+      <section id="tab-settings" class="tab-panel">
+        <div class="card">
+          <div class="card-header">
+            <h2>Configuration Matérielle & Périphériques</h2>
+          </div>
+          <div class="card-body">
+            <div class="settings-group">
+              <h3>Sélection de la Caméra (Webcam)</h3>
+              <p class="text-sm">Choisissez d'utiliser la webcam intégrée du PC portable ou une webcam USB externe (extension) :</p>
+              <div class="radio-cards">
+                <label class="radio-card">
+                  <input type="radio" name="camera_choice" value="0" checked onchange="updateCameraChoice(0)">
+                  <div class="radio-content">
+                    <strong>💻 Webcam Laptop</strong>
+                    <span class="text-sm text-muted">Caméra intégrée HP Wide Vision (/dev/video0)</span>
+                  </div>
+                </label>
+                <label class="radio-card">
+                  <input type="radio" name="camera_choice" value="1" onchange="updateCameraChoice(1)">
+                  <div class="radio-content">
+                    <strong>🔌 Webcam Externe USB (Extension)</strong>
+                    <span class="text-sm text-muted">Webcam branchée en USB (/dev/video1 ou supérieure)</span>
+                  </div>
+                </label>
+              </div>
+            </div>
+
+            <hr class="separator">
+
+            <div class="settings-group">
+              <h3>Mode de Lecture des Codes</h3>
+              <p class="text-sm">Mode d'acquisition des codes d'accès :</p>
+              <div class="radio-cards">
+                <label class="radio-card">
+                  <input type="radio" name="scanner_mode" value="auto" checked>
+                  <div class="radio-content">
+                    <strong>⚡ Détection Automatique</strong>
+                    <span class="text-sm text-muted">Lecteur USB HID si branché, sinon repli clavier laptop / interface web</span>
+                  </div>
+                </label>
+                <label class="radio-card">
+                  <input type="radio" name="scanner_mode" value="manual">
+                  <div class="radio-content">
+                    <strong>⌨️ Saisie Manuelle / Interface Web</strong>
+                    <span class="text-sm text-muted">Utilisation depuis terminal ou application web</span>
+                  </div>
+                </label>
+              </div>
+            </div>
+
+            <hr class="separator">
+
+            <div class="settings-group">
+              <h3>Réseau & Point d'Accès ESP32-S3</h3>
+              <ul class="settings-list">
+                <li><strong>SSID Point d'Accès ESP32 :</strong> <code>SentinelAI</code></li>
+                <li><strong>Sécurité Wi-Fi :</strong> WPA2-PSK (mot de passe stocké dans <code>.env</code>)</li>
+                <li><strong>Adresse IP Serveur Web :</strong> <code>http://192.168.4.2:8000</code> ou <code>http://localhost:8000</code></li>
+              </ul>
+            </div>
+          </div>
+        </div>
+      </section>
+
+    </main>
+
+    <!-- Modal Visionneuse d'Image -->
+    <div id="image-modal" class="modal hidden" onclick="closeModal()">
+      <div class="modal-content" onclick="event.stopPropagation()">
+        <span class="close-btn" onclick="closeModal()">&times;</span>
+        <img id="modal-img" src="" alt="Capture d'intrusion">
+        <div id="modal-caption" class="modal-caption"></div>
+      </div>
+    </div>
+
+  </div>
+
+  <script src="js/app.js"></script>
+</body>
+</html>

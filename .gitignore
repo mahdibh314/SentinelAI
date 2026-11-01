@@ -1,0 +1,40 @@
+# Python
+__pycache__/
+*.pyc
+venv/
+.venv/
+.env
+
+# IDE
+.vscode/
+.idea/
+
+# Logs / temporaire
+*.log
+*.tmp
+
+# Gros fichiers (limite GitHub : 100 Mo)
+*.mp4
+*.avi
+*.mov
+runs/
+datasets/
+esp32_fw/lib/micro_ros_platformio/
+esp32_fw/lib/micro_ros_platformio/
+
+# Cache / tests
+.pytest_cache/
+
+# Bases de données et logs locaux
+*.db
+logs/*
+
+# ROS 2 (build colcon)
+ros2_ws/build/
+ros2_ws/install/
+ros2_ws/log/
+
+# ESP32 / PlatformIO
+esp32_fw/.pio/
+esp32_fw/lib/micro_ros_platformio/
+esp32_fw/include/secrets.h

@@ -1,0 +1,25 @@
+# Configuration des filtres et rangements prédéfinis de l'interface
+filters:
+  groups:
+    - "tous"
+    - "Direction"
+    - "Technique"
+    - "Visiteur"
+  zones:
+    - "toutes"
+    - "zone_libre"
+    - "zone_interdite"
+  levels:
+    - "tous"
+    - 1
+    - 2
+    - 3
+default_sort: "ts"
+default_order: "desc"
+summary_groups:
+  - "Direction"
+  - "Technique"
+  - "Visiteur"
+summary_zones:
+  - "zone_libre"
+  - "zone_interdite"

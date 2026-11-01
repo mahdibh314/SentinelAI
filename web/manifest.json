@@ -1,0 +1,9 @@
+{
+  "name": "SentinelAI",
+  "short_name": "SentinelAI",
+  "start_url": "/",
+  "display": "standalone",
+  "background_color": "#121212",
+  "theme_color": "#1f2937",
+  "icons": []
+}

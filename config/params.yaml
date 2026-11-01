@@ -1,0 +1,20 @@
+scanner:
+  device_name: ""  # Chaîne vide pour auto-détection / repli clavier standard
+  baudrate: 115200
+
+access:
+  db_path: "data/sentinel.db"
+  valid_grant_duration_s: 5.0
+  alarm_max_duration_s: 10.0
+  heartbeat_timeout_s: 15.0
+
+vision:
+  camera_index: 0
+  model: "yolo11n.pt"
+  confidence: 0.25
+  classes: [0]  # 0 = person
+  snapshot_dir: "data/snapshots"
+
+web:
+  host: "0.0.0.0"
+  port: 8000
